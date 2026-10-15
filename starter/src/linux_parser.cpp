@@ -135,7 +135,7 @@ long LinuxParser::UpTime() {
 // TODO: Read and return the number of jiffies for the system
 long LinuxParser::Jiffies() {
   string line, cpu;
-  long jiffies=0;
+  long jiffies = 0;
   long value;
 
   std::ifstream filestream(kProcDirectory + kStatFilename);
@@ -177,23 +177,91 @@ long LinuxParser::ActiveJiffies(int pid) {
 }
 
 // TODO: Read and return the number of active jiffies for the system
-long LinuxParser::ActiveJiffies() { return 0; }
+long LinuxParser::ActiveJiffies() { 
+  string line, cpu;
+  long activeJiffies = 0;
+  long value;
+
+  std::ifstream filestream(kProcDirectory + kStatFilename);
+  if (filestream.is_open()) {
+    std::getline(filestream, line);
+    std::istringstream linestream(line);
+    linestream >> cpu;
+    for (int i = 0; i < 8 && linestream >> value; ++i) {
+      if (i != 3 && i != 4) activeJiffies += value;
+    }
+  }
+  return activeJiffies; 
+}
 
 // TODO: Read and return the number of idle jiffies for the system
-long LinuxParser::IdleJiffies() { return 0; }
+long LinuxParser::IdleJiffies() {
+  string line, cpu;
+  long idleJiffies = 0;
+  long value;
+
+  std::ifstream filestream(kProcDirectory + kStatFilename);
+  if (filestream.is_open()) {
+    std::getline(filestream, line);
+    std::istringstream linestream(line);
+    linestream >> cpu;
+    for (int i = 0; i < 3 && linestream >> value; ++i) {}
+    if (linestream >> value) idleJiffies += value;
+  }
+  return idleJiffies; 
+}
 
 // TODO: Read and return CPU utilization
-vector<string> LinuxParser::CpuUtilization() { return {}; }
+vector<string> LinuxParser::CpuUtilization() {
+  string line, token;
+  vector<string> cpuUtils {};
+
+  std::ifstream filestream(kProcDirectory + kStatFilename);
+  if (filestream.is_open()) {
+    std::getline(filestream, line);
+    std::istringstream linestream(line);
+    linestream >> token;
+    while (linestream >> token) cpuUtils.push_back(token);
+  }
+  return cpuUtils;
+}
 
 // TODO: Read and return the total number of processes
-int LinuxParser::TotalProcesses() { return 0; }
+int LinuxParser::TotalProcesses() { 
+  return LinuxParser::Pids().size();
+}
 
 // TODO: Read and return the number of running processes
-int LinuxParser::RunningProcesses() { return 0; }
+int LinuxParser::RunningProcesses() {
+  string line, firstToken;
+  int runningProcs = 0;
+
+  std::ifstream filestream(kProcDirectory + kStatFilename);
+  if (filestream.is_open()) {
+    while (std::getline(filestream, line)) {
+      std::istringstream linestream(line);
+      linestream >> firstToken;
+      if (firstToken == "procs_running") {
+        linestream >> runningProcs;
+        break;
+      }
+    }
+  }
+  return runningProcs;
+}
 
 // TODO: Read and return the command associated with a process
 // REMOVE: [[maybe_unused]] once you define the function
-string LinuxParser::Command(int pid[[maybe_unused]]) { return string(); }
+string LinuxParser::Command(int pid) {
+  string line;
+
+  std::ifstream filestream(kProcDirectory + to_string(pid) + kCmdlineFilename);
+  if (filestream.is_open()) {
+    std::getline(filestream, line);
+    std::replace(line.begin(), line.end(), '\0', ' ');
+  }
+  return line; 
+}
 
 // TODO: Read and return the memory used by a process
 // REMOVE: [[maybe_unused]] once you define the function
@@ -209,4 +277,40 @@ string LinuxParser::User(int pid[[maybe_unused]]) { return string(); }
 
 // TODO: Read and return the uptime of a process
 // REMOVE: [[maybe_unused]] once you define the function
-long LinuxParser::UpTime(int pid[[maybe_unused]]) { return 0; }
+long LinuxParser::UpTime(int pid) {
+  string line, value;
+  long uptime = 0, processUptime = 0;
+
+  std::ifstream filestream(kProcDirectory + to_string(pid) + kStatFilename);
+  if (filestream.is_open()) {
+    if (std::getline(filestream, line)) {
+      size_t pos = line.rfind(')');
+      if (pos != string::npos) {
+        string substr = line.substr(pos+2);
+        std::istringstream linestream(substr);
+      
+        for (int i = 0; i < 20; ++i) {
+          if (!(linestream >> value)) {
+            return 0;
+          }
+        }
+
+        long ticksPerSecond = sysconf(_SC_CLK_TCK);
+
+        if (ticksPerSecond <= 0) {
+            return 0;
+        }
+
+        long startTime = std::stol(value) / ticksPerSecond;
+
+        long systemUptime = LinuxParser::UpTime();
+        processUptime = systemUptime - startTime;
+
+        if (processUptime < 0) {
+            return 0;
+        }
+      }
+    }
+  }
+  return processUptime;
+}
