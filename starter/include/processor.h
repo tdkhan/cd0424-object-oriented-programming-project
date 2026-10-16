@@ -1,13 +1,17 @@
 #ifndef PROCESSOR_H
 #define PROCESSOR_H
 
+#include "vector"
+# include "string"
+
 class Processor {
 public:
-	Processor()
+	Processor();
 	float Utilization();  // TODO: See src/processor.cpp
 
 	// TODO: Declare any necessary private members
 private:
+	std::vector<std::string> processor {};
 	long previousActive = 0;
 	long previousIdle = 0;
 };

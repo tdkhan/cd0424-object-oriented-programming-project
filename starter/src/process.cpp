@@ -19,7 +19,7 @@ int Process::Pid() {
 }
 
 // TODO: Return this process's CPU utilization
-float Process::CpuUtilization() { 
+float Process::CpuUtilization() const { 
 	long activeJiffies = LinuxParser::ActiveJiffies(pid);
 	long ticksPerSecond = sysconf(_SC_CLK_TCK);
 	long uptime = LinuxParser::UpTime(pid);

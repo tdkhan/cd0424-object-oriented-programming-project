@@ -1,13 +1,14 @@
 #include "processor.h"
 #include "linux_parser.h"
 
-Processor::Processor() : previousActive(linux_parser::ActiveJiffies()),
-						previousIdle(linux_parser::IdleJiffies()) {}
-						
+Processor::Processor() : processor(LinuxParser::CpuUtilization()),
+						previousActive(LinuxParser::ActiveJiffies()),
+						previousIdle(LinuxParser::IdleJiffies()) {}
+
 // TODO: Return the aggregate CPU utilization
 float Processor::Utilization() {
-	long currentActive = linux_parser::ActiveJiffies();
-	long currentIdle = linux_parser::IdleJiffies();
+	long currentActive = LinuxParser::ActiveJiffies();
+	long currentIdle = LinuxParser::IdleJiffies();
 
 	long activeDelta = currentActive - previousActive;
 	long idleDelta = currentIdle - previousIdle;
