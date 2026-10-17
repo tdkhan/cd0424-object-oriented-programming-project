@@ -4,7 +4,6 @@
 Processor::Processor() : previousActive(LinuxParser::ActiveJiffies()),
 						previousIdle(LinuxParser::IdleJiffies()) {}
 
-// TODO: Return the aggregate CPU utilization
 float Processor::Utilization() {
 	long currentActive = LinuxParser::ActiveJiffies();
 	long currentIdle = LinuxParser::IdleJiffies();

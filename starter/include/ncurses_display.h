@@ -2,6 +2,8 @@
 #define NCURSES_DISPLAY_H
 
 #include <curses.h>
+#include <string>
+#include <vector>
 
 #include "process.h"
 #include "system.h"

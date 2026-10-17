@@ -1,8 +1,8 @@
-#include <curses.h>
 #include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
+#include <algorithm>
 
 #include "format.h"
 #include "ncurses_display.h"
@@ -70,9 +70,12 @@ void NCursesDisplay::DisplayProcesses(std::vector<Process>& processes,
   mvwprintw(window, row, command_column, "COMMAND");
   wattroff(window, COLOR_PAIR(2));
   for (int i = 0; i < std::min<int>(n, processes.size()); ++i) {
-    //You need to take care of the fact that the cpu utilization has already been multiplied by 100.
     // Clear the line
-    mvwprintw(window, ++row, pid_column, (string(window->_maxx-2, ' ').c_str()));
+    wmove(window, ++row, pid_column);
+    int clearWidth = getmaxx(window) - pid_column - 1;
+    if (clearWidth > 0) {
+      whline(window, ' ', clearWidth);
+    }
     
     mvwprintw(window, row, pid_column, "%s", to_string(processes[i].Pid()).c_str());
     mvwprintw(window, row, user_column, "%s", processes[i].User().c_str());
