@@ -91,7 +91,7 @@ string LinuxParser::Kernel() {
   return pids;
 }*/
 
-// Updates LinuxParser::Pids()
+// improved LinuxParser::Pids()
 vector<int> LinuxParser::Pids() {
   vector<int> pids;
   std::filesystem::path proc_path{kProcDirectory};
@@ -126,7 +126,7 @@ vector<int> LinuxParser::Pids() {
 // TODO: Read and return the system memory utilization
 float LinuxParser::MemoryUtilization() { 
   long totalMemory = 0;
-  long freeMemory = 0;
+  long availableMemory = 0;
   string label, value, line;
 
   std::ifstream filestream(kProcDirectory + kMeminfoFilename);
@@ -135,14 +135,14 @@ float LinuxParser::MemoryUtilization() {
       std::istringstream linestream(line);
       if (linestream >> label >> value) {
         if (label == "MemTotal:") totalMemory = std::stol(value);
-        if (label == "MemFree:") freeMemory = std::stol(value);
+        else if (label == "MemAvailable:") availableMemory = std::stol(value);
       }
     }
   }
 
   if (totalMemory == 0) return 0.0f;
 
-  return static_cast<float>(totalMemory - freeMemory) / totalMemory; 
+  return static_cast<float>(totalMemory - availableMemory) / totalMemory; 
 }
 
 // TODO: Read and return the system uptime
@@ -157,20 +157,11 @@ long LinuxParser::UpTime() {
 
 // TODO: Read and return the number of jiffies for the system
 long LinuxParser::Jiffies() {
-  string line, cpu;
-  long jiffies = 0;
-  long value;
-
-  std::ifstream filestream(kProcDirectory + kStatFilename);
-  if (filestream.is_open()) {
-    std::getline(filestream, line);
-    std::istringstream linestream(line);
-    linestream >> cpu;
-    for (int i = 0; i < 8 && linestream >> value; ++i) {
-        jiffies += value;
-      }
-  }
-  return jiffies; 
+  auto v = CpuUtilization();
+  if (v.size() <= kSteal_) return 0;
+  return std::stol(v[kUser_]) + std::stol(v[kNice_]) + std::stol(v[kSystem_]) + 
+        std::stol(v[kIdle_]) + std::stol(v[kIOwait_]) + std::stol(v[kIRQ_]) +
+        std::stol(v[kSoftIRQ_]) + std::stol(v[kSteal_]);
 }
 
 // TODO: Read and return the number of active jiffies for a PID
@@ -201,39 +192,14 @@ long LinuxParser::ActiveJiffies(int pid) {
 
 // TODO: Read and return the number of active jiffies for the system
 long LinuxParser::ActiveJiffies() { 
-  string line, cpu;
-  long activeJiffies = 0;
-  long value;
-
-  std::ifstream filestream(kProcDirectory + kStatFilename);
-  if (filestream.is_open()) {
-    std::getline(filestream, line);
-    std::istringstream linestream(line);
-    linestream >> cpu;
-    for (int i = 0; i < 8 && linestream >> value; ++i) {
-      if (i != 3 && i != 4) activeJiffies += value;
-    }
-  }
-  return activeJiffies; 
+  return Jiffies() - IdleJiffies();
 }
 
 // TODO: Read and return the number of idle jiffies for the system
 long LinuxParser::IdleJiffies() {
-  string line, cpu;
-  long idleJiffies = 0;
-  long value;
-
-  std::ifstream filestream(kProcDirectory + kStatFilename);
-  if (filestream.is_open()) {
-    std::getline(filestream, line);
-    std::istringstream linestream(line);
-    linestream >> cpu;
-    for (int i = 0; i < 3 && linestream >> value; ++i) {
-      if (!(linestream >> value)) return 0;
-    }
-    if (linestream >> value) idleJiffies += value;
-  }
-  return idleJiffies; 
+  auto v = CpuUtilization();
+  if (v.size() <= kIOwait_) return 0;
+  return std::stol(v[kIdle_]) + std::stol(v[kIOwait_]);
 }
 
 // TODO: Read and return CPU utilization
@@ -303,7 +269,7 @@ string LinuxParser::Ram(int pid) {
       }
     }
   }
-  return ""; 
+  return "0"; 
 }
 
 // TODO: Read and return the user ID associated with a process
@@ -327,7 +293,7 @@ string LinuxParser::Uid(int pid) {
 // TODO: Read and return the user associated with a process
 // REMOVE: [[maybe_unused]] once you define the function
 string LinuxParser::User(int pid) { 
-  string line, firstToken, secondToken, thirdToken;
+  string line;
   string uid = LinuxParser::Uid(pid);
 
   if (uid.empty()) return "";
@@ -337,6 +303,7 @@ string LinuxParser::User(int pid) {
     while (std::getline(filestream, line)) {
       std::replace(line.begin(), line.end(), ':', ' ');
       std::istringstream linestream(line);
+      string firstToken, secondToken, thirdToken;
       linestream >> firstToken >> secondToken >> thirdToken;
       if (thirdToken == uid) {
         return firstToken;

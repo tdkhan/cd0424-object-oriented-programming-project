@@ -3,6 +3,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "process.h"
 #include "processor.h"
@@ -17,21 +18,19 @@ using std::vector;
 
 You need to properly format the uptime. Refer to the comments mentioned in format. cpp for formatting the uptime.*/
 
-System::System() {
-
-	vector<int> pids = LinuxParser::Pids();
-	for (int process : pids) {
-		processes_.emplace_back(Process(process));
-	}
-}
-
 // TODO: Return the system's CPU
 Processor& System::Cpu() { 
 	return cpu_; 
 }
 
 // TODO: Return a container composed of the system's processes
-vector<Process>& System::Processes() { 
+vector<Process>& System::Processes() {
+	processes_.clear();
+	for (int process : LinuxParser::Pids()) {
+			processes_.emplace_back(process);
+		}
+	std::sort(processes_.begin(), processes_.end(),
+			[](const Process& a, const Process& b) {return b < a;}); 
 	return processes_; 
 }
 

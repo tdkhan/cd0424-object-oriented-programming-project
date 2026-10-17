@@ -1,8 +1,7 @@
 #include "processor.h"
 #include "linux_parser.h"
 
-Processor::Processor() : processor(LinuxParser::CpuUtilization()),
-						previousActive(LinuxParser::ActiveJiffies()),
+Processor::Processor() : previousActive(LinuxParser::ActiveJiffies()),
 						previousIdle(LinuxParser::IdleJiffies()) {}
 
 // TODO: Return the aggregate CPU utilization
